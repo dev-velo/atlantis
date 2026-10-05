@@ -124,6 +124,7 @@ type Server struct {
 	WebUsername                    string
 	WebPassword                    string
 	ProjectCmdOutputHandler        jobs.ProjectCommandOutputHandler
+	BetaJobStatuses                *jobs.BetaJobStatusStore
 	ScheduledExecutorService       *scheduled.ExecutorService
 	DisableGlobalApplyLock         bool
 	EnableProfilingAPI             bool
@@ -440,6 +441,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	}
 
 	var projectCmdOutputHandler jobs.ProjectCommandOutputHandler
+	var betaJobStatuses *jobs.BetaJobStatusStore
 
 	if userConfig.TFEToken != "" && !userConfig.TFELocalExecutionMode {
 		// When TFE is enabled and using remote execution mode log streaming is not necessary.
@@ -450,6 +452,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 			projectCmdOutput,
 			logger,
 		)
+		betaJobStatuses = jobs.NewBetaJobStatusStore()
 	}
 
 	distribution := terraform.NewDistribution(userConfig.DefaultTFDistribution)
@@ -674,9 +677,9 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		GlobalCfg:        globalCfg,
 		WorkingDirLocker: workingDirLocker,
 		WorkingDir:       workingDir,
-		PreWorkflowHookRunner: runtime.DefaultPreWorkflowHookRunner{
+		PreWorkflowHookRunner: NewBetaWorkflowHookObserver(runtime.DefaultPreWorkflowHookRunner{
 			OutputHandler: projectCmdOutputHandler,
-		},
+		}, betaJobStatuses),
 		CommitStatusUpdater: commitStatusUpdater,
 		Router:              router,
 	}
@@ -685,9 +688,9 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		GlobalCfg:        globalCfg,
 		WorkingDirLocker: workingDirLocker,
 		WorkingDir:       workingDir,
-		PostWorkflowHookRunner: runtime.DefaultPostWorkflowHookRunner{
+		PostWorkflowHookRunner: NewBetaWorkflowHookObserver(runtime.DefaultPostWorkflowHookRunner{
 			OutputHandler: projectCmdOutputHandler,
-		},
+		}, betaJobStatuses),
 		CommitStatusUpdater: commitStatusUpdater,
 		Router:              router,
 	}
@@ -735,7 +738,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 			WorkingDir:               workingDir,
 			Database:                 database,
 			PullClosedTemplate:       &events.PullClosedEventTemplate{},
-			LogStreamResourceCleaner: projectCmdOutputHandler,
+			LogStreamResourceCleaner: NewBetaJobCleanup(projectCmdOutputHandler, betaJobStatuses),
 			VCSClient:                vcsClient,
 			PlanStore:                planStore,
 		},
@@ -868,9 +871,10 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		ProjectCommandRunner: projectCommandRunner,
 		JobURLSetter:         jobs.NewJobURLSetter(router, commitStatusUpdater),
 	}
+	betaProjectObserver := NewBetaProjectCommandObserver(projectOutputWrapper, betaJobStatuses)
 	instrumentedProjectCmdRunner := events.NewInstrumentedProjectCommandRunner(
 		statsScope,
-		projectOutputWrapper,
+		betaProjectObserver,
 	)
 
 	policyCheckCommandRunner := events.NewPolicyCheckCommandRunner(
@@ -950,7 +954,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 	versionCommandRunner := events.NewVersionCommandRunner(
 		pullUpdater,
 		projectCommandBuilder,
-		projectOutputWrapper,
+		betaProjectObserver,
 		userConfig.ParallelPoolSize,
 		userConfig.SilenceNoProjects,
 	)
@@ -1178,6 +1182,7 @@ func NewServer(userConfig UserConfig, config Config) (*Server, error) {
 		DisableGlobalApplyLock:         userConfig.DisableGlobalApplyLock,
 		Drainer:                        drainer,
 		ProjectCmdOutputHandler:        projectCmdOutputHandler,
+		BetaJobStatuses:                betaJobStatuses,
 		WebAuthentication:              userConfig.WebBasicAuth,
 		WebUsername:                    userConfig.WebUsername,
 		WebPassword:                    userConfig.WebPassword,
@@ -1204,6 +1209,7 @@ func (s *Server) SetupRoutes() {
 	})
 	s.Router.HandleFunc("/healthz", s.Healthz).Methods("GET")
 	s.Router.HandleFunc("/beta", s.BetaDashboard).Methods("GET")
+	s.Router.HandleFunc("/beta/locks", s.BetaLocks).Methods("GET")
 	s.Router.HandleFunc("/readyz", s.Readyz).Methods("GET")
 	s.Router.HandleFunc("/status", s.StatusController.Get).Methods("GET")
 	s.Router.PathPrefix("/static/").Handler(http.FileServer(http.FS(staticAssets)))

@@ -120,17 +120,17 @@ func TestBetaDashboardTemplate(t *testing.T) {
 			var output bytes.Buffer
 			Ok(t, web_templates.BetaDashboardTemplate.Execute(&output, data))
 			html := output.String()
-			Assert(t, strings.Contains(html, `<h1 class="visually-hidden">Atlantis dashboard</h1>`), "must retain an accessible page heading without using results space")
+			Assert(t, strings.Contains(html, `<h1 class="visually-hidden">Jobs · Atlantis</h1>`), "must retain an accessible Jobs page heading without using results space")
 			Assert(t, !strings.Contains(html, "Dashboard · Beta"), "must not render the removed page header")
 			Assert(t, !strings.Contains(html, `<h1>Jobs</h1>`), "must not repeat the jobs section heading in the page header")
 			Assert(t, strings.Contains(html, `<title>Jobs · Atlantis</title>`), "must use the Jobs page title")
-			Assert(t, strings.Contains(html, `<h2 id="pull-heading">Jobs</h2>`), "must use the Jobs section label")
+			Assert(t, strings.Contains(html, `<h2 id="pull-heading" class="visually-hidden">Jobs</h2>`), "must retain the accessible Jobs section label")
 			Assert(t, strings.Contains(html, `Jobs <span id="pull-count">2</span>`), "navigation must count tracked jobs")
-			for _, expected := range []string{"/atlantis/static/css/beta-dashboard.css?v=3", "/atlantis/static/js/beta-dashboard-filters.js?v=2", `/atlantis/?view=classic`, `/atlantis/jobs/job-id`, `/atlantis/lock?id=encoded%252Fid`, "Workspace unavailable", "User unavailable", "test-version", "&lt;script&gt;", `class="dashboard-content" role="region" aria-label="Dashboard results" tabindex="0"`} {
+			for _, expected := range []string{"/atlantis/static/css/beta-dashboard.css?v=7", "/atlantis/static/css/beta-job-output.css?v=1", "/atlantis/static/js/beta-dashboard-filters.js?v=3", "/atlantis/static/js/beta-job-output.js?v=1", `/atlantis/?view=classic`, `/atlantis/jobs/job-id`, `/atlantis/lock?id=encoded%252Fid`, "Workspace unavailable", "User unavailable", "test-version", "&lt;script&gt;", `class="dashboard-content" role="region" aria-label="Jobs results" tabindex="0"`} {
 				Assert(t, strings.Contains(html, expected), "missing %q", expected)
 			}
 			Assert(t, !strings.Contains(html, "<script>alert(1)</script>"), "metadata must be escaped")
-			Assert(t, !strings.Contains(html, "data-status="), "must not fabricate operation results")
+			Assert(t, strings.Contains(html, `data-status="Unknown"`), "missing execution details must remain Unknown")
 			Equals(t, enabled, strings.Contains(html, `id="apply-toggle"`))
 			Equals(t, enabled, strings.Contains(html, `id="apply-dialog"`))
 			Equals(t, enabled, strings.Contains(html, `href="#apply-controls"`))
@@ -200,7 +200,7 @@ func TestBetaDashboardCompactJobDetails(t *testing.T) {
 	}
 	Ok(t, web_templates.BetaDashboardTemplate.Execute(&output, data))
 	html := output.String()
-	for _, expected := range []string{`class="request-info"`, `class="project-list"`, "networking-production", "terraform/networking", "terraform/storage", `href="/atlantis/jobs/first-plan">plan</a>`, `href="/atlantis/jobs/second-plan">plan</a>`, `href="/atlantis/jobs/storage">Planning storage</a>`, "2026-10-04 14:00:47", "2026-10-04 13:59:29"} {
+	for _, expected := range []string{`class="request-info"`, `class="project-list"`, "networking-production", "terraform/networking", "terraform/storage", `href="/atlantis/jobs/first-plan" data-output-link`, `href="/atlantis/jobs/second-plan" data-output-link`, `href="/atlantis/jobs/storage" data-output-link`, "2026-10-04 14:00:47", "2026-10-04 13:59:29"} {
 		Assert(t, strings.Contains(html, expected), "compact job rows must retain %q", expected)
 	}
 	Equals(t, 3, strings.Count(html, `class="job-link"`))

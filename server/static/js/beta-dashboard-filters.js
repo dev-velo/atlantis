@@ -4,12 +4,14 @@
 (() => {
   const form = document.getElementById('dashboard-filters');
   const search = document.getElementById('metadata-search');
+  const page = document.body.dataset.page;
   const fields = ['repo', 'workspace', 'user'];
   const selects = fields.map(field => document.getElementById(`${field}-filter`));
-  const pulls = [...document.querySelectorAll('.pull-row')];
-  const locks = [...document.querySelectorAll('.lock-list li[data-repo]')];
-  const rows = [...pulls, ...locks];
+  const pulls = page === 'jobs' ? [...document.querySelectorAll('.pull-row')] : [];
+  const locks = page === 'locks' ? [...document.querySelectorAll('.lock-list li[data-repo]')] : [];
+  const rows = page === 'jobs' ? pulls : locks;
   const repositories = [...document.querySelectorAll('.repository')];
+  const lockList = document.querySelector('.lock-list');
   const collapsedState = new Map();
   let wasFiltering = false;
 
@@ -66,13 +68,20 @@
 
     const visiblePulls = pulls.filter(row => !row.hidden);
     const visibleLocks = locks.filter(row => !row.hidden);
-    document.getElementById('pull-count').textContent = jobCount(visiblePulls);
-    document.getElementById('lock-count').textContent = visibleLocks.length;
-    document.getElementById('no-pull-matches').hidden = pulls.length === 0 || visiblePulls.length > 0;
-    document.getElementById('no-lock-matches').hidden = locks.length === 0 || visibleLocks.length > 0;
-    document.querySelector('.lock-list').hidden = locks.length > 0 && visibleLocks.length === 0;
+    const visibleJobCount = jobCount(visiblePulls);
+    const pullCount = document.getElementById('pull-count');
+    const lockCount = document.getElementById('lock-count');
+    if (page === 'jobs' && pullCount) pullCount.textContent = visibleJobCount;
+    if (page === 'locks' && lockCount) lockCount.textContent = visibleLocks.length;
+    const noPullMatches = document.getElementById('no-pull-matches');
+    const noLockMatches = document.getElementById('no-lock-matches');
+    if (noPullMatches) noPullMatches.hidden = pulls.length === 0 || visiblePulls.length > 0;
+    if (noLockMatches) noLockMatches.hidden = locks.length === 0 || visibleLocks.length > 0;
+    if (lockList) lockList.hidden = locks.length > 0 && visibleLocks.length === 0;
     document.getElementById('clear-filters').disabled = !active;
-    document.getElementById('filter-results').textContent = `Showing ${jobCount(visiblePulls)} of ${jobCount(pulls)} jobs and ${visibleLocks.length} of ${locks.length} locks`;
+    document.getElementById('filter-results').textContent = page === 'jobs'
+      ? `Showing ${visibleJobCount} of ${jobCount(pulls)} jobs`
+      : `Showing ${visibleLocks.length} of ${locks.length} locks`;
     wasFiltering = active;
   }
 

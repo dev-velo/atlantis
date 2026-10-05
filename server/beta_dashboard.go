@@ -12,5 +12,6 @@ import (
 // BetaDashboard is an opt-in view of the same data as the classic dashboard.
 // It uses the existing routes and middleware; it does not change job execution.
 func (s *Server) BetaDashboard(w http.ResponseWriter, _ *http.Request) {
-	s.renderIndex(w, web_templates.BetaDashboardTemplate)
+	writer := web_templates.NewBetaDashboardTemplate(s.BetaJobStatuses.Snapshot(), web_templates.BetaDashboardJobsPage)
+	s.renderIndex(w, writer)
 }

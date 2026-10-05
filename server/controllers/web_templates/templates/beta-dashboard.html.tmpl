@@ -1,16 +1,38 @@
+{{ $basePath := .CleanedBasePath }}
+{{ $isLocksPage := eq .Page 1 }}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Jobs · Atlantis</title>
+  <title>{{ if eq .Page 1 }}Locks{{ else }}Jobs{{ end }} · Atlantis</title>
   <link rel="icon" href="{{ .CleanedBasePath }}/static/images/atlantis-icon.png">
   <link rel="stylesheet" href="{{ .CleanedBasePath }}/static/css/normalize.css">
   <link rel="stylesheet" href="{{ .CleanedBasePath }}/static/css/skeleton.css">
-  <link rel="stylesheet" href="{{ .CleanedBasePath }}/static/css/beta-dashboard.css?v=3">
+  <link rel="stylesheet" href="{{ .CleanedBasePath }}/static/css/beta-dashboard.css?v=7">
+  {{ if not $isLocksPage }}<link rel="stylesheet" href="{{ .CleanedBasePath }}/static/css/beta-job-output.css?v=1">{{ end }}
 </head>
-<body>
-{{ $basePath := .CleanedBasePath }}
+<body data-page="{{ if eq .Page 1 }}locks{{ else }}jobs{{ end }}">
+{{ define "beta-job-row" }}
+<li class="job-link" data-job-id="{{ .Job.JobID }}"><span class="job-description">
+  <span class="job-operation">{{ if .Operation }}{{ .Operation }}{{ else }}Job{{ end }}</span>
+  <span class="job-result-group">
+    {{ if eq .Details.Status 1 }}<span class="job-result job-status-running">Running</span>
+    {{ else if eq .Details.Status 2 }}<span class="job-result job-status-succeeded">Succeeded</span>
+    {{ else if eq .Details.Status 3 }}<span class="job-result job-status-failed">Failed</span>
+    {{ else }}<span class="job-result job-status-unknown">Unknown</span>{{ end }}
+    {{ if and (eq .Details.Operation "plan") .Details.HasPlanStats }}
+      {{ $stats := .Details.PlanStats }}
+      <span class="job-counts">
+        <span aria-hidden="true">+{{ $stats.Add }} ~{{ $stats.Change }} -{{ $stats.Destroy }}{{ if gt $stats.Import 0 }} <span class="extra-count">import {{ $stats.Import }}</span>{{ end }}{{ if gt $stats.Forget 0 }} <span class="extra-count">forget {{ $stats.Forget }}</span>{{ end }}</span>
+        <span class="visually-hidden">{{ $stats.Add }} to add, {{ $stats.Change }} to change, {{ $stats.Destroy }} to destroy{{ if gt $stats.Import 0 }}, {{ $stats.Import }} to import{{ end }}{{ if gt $stats.Forget 0 }}, {{ $stats.Forget }} to forget{{ end }}</span>
+      </span>
+      {{ if and (eq $stats.Add 0) (eq $stats.Change 0) (eq $stats.Destroy 0) (eq $stats.Import 0) (eq $stats.Forget 0) }}<span class="no-change-label">No changes</span>{{ end }}
+    {{ end }}
+  </span>
+  <a class="job-output-link" href="{{ .OutputURL }}" data-output-link data-repository="{{ .Repository }}" data-workspace="{{ .Workspace }}" data-project="{{ .Project }}" data-operation="{{ .Operation }}" data-status="{{ if eq .Details.Status 1 }}Running{{ else if eq .Details.Status 2 }}Succeeded{{ else if eq .Details.Status 3 }}Failed{{ else }}Unknown{{ end }}" data-counts="{{ if and (eq .Details.Operation "plan") .Details.HasPlanStats }}{{ $stats := .Details.PlanStats }}{{ printf "+%d ~%d -%d" $stats.Add $stats.Change $stats.Destroy }}{{ if gt $stats.Import 0 }} · import {{ $stats.Import }}{{ end }}{{ if gt $stats.Forget 0 }} · forget {{ $stats.Forget }}{{ end }}{{ end }}" data-timestamp="{{ .Job.TimeFormatted }}">Output</a>
+</span>{{ if .Job.TimeFormatted }} <time datetime="{{ .Job.Time.Format "2006-01-02T15:04:05Z07:00" }}">{{ .Job.TimeFormatted }}</time>{{ end }}</li>
+{{ end }}
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="dashboard">
   <aside class="sidebar">
@@ -20,11 +42,11 @@
     </a>
     <nav aria-label="Dashboard">
       <p class="nav-label">Workspace</p>
-      <a class="nav-link" href="#pull-requests" aria-current="location">Jobs <span id="pull-count">{{ .Total }}</span></a>
-      <a class="nav-link" href="#locks">Locks <span id="lock-count">{{ len .Locks }}</span></a>
+      <a class="nav-link" href="{{ .CleanedBasePath }}/beta"{{ if not $isLocksPage }} aria-current="page"{{ end }}>Jobs <span id="pull-count">{{ .Total }}</span></a>
+      <a class="nav-link" href="{{ .CleanedBasePath }}/beta/locks"{{ if $isLocksPage }} aria-current="page"{{ end }}>Locks <span id="lock-count">{{ len .Locks }}</span></a>
       {{ if .ApplyLock.GlobalApplyLockEnabled }}
       <p class="nav-label">General</p>
-      <a class="nav-link" href="#apply-controls">Apply controls</a>
+      <a class="nav-link" href="{{ if $isLocksPage }}{{ .CleanedBasePath }}/beta#apply-controls{{ else }}#apply-controls{{ end }}">Apply controls</a>
       {{ end }}
     </nav>
     <div class="sidebar-footer">
@@ -36,23 +58,22 @@
     </div>
   </aside>
   <main id="main">
-    <h1 class="visually-hidden">Atlantis dashboard</h1>
+    <h1 class="visually-hidden">{{ if $isLocksPage }}Locks{{ else }}Jobs{{ end }} · Atlantis</h1>
     <form class="dashboard-filters" id="dashboard-filters" aria-label="Filter dashboard" hidden>
       <div class="search-field">
         <label for="metadata-search">Search</label>
-        <input type="search" id="metadata-search" placeholder="Search repos, workspaces, or users" aria-describedby="search-help" autocomplete="off">
+        <input type="search" id="metadata-search" placeholder="Search repos, workspaces, or users" autocomplete="off">
       </div>
       <div class="filter-field"><label for="repo-filter">Repository</label><select id="repo-filter"><option value="">All repositories</option></select></div>
       <div class="filter-field"><label for="workspace-filter">Workspace</label><select id="workspace-filter"><option value="">All workspaces</option></select></div>
       <div class="filter-field"><label for="user-filter">User</label><select id="user-filter"><option value="">All users</option></select></div>
       <button type="reset" id="clear-filters" disabled>Clear filters</button>
-      <p id="search-help">Partial names and abbreviations work. Combine terms with spaces. Users are known lock owners; some jobs have no user metadata.</p>
       <p id="filter-results" role="status" aria-live="polite"></p>
     </form>
-    <div class="dashboard-content" role="region" aria-label="Dashboard results" tabindex="0">
+    <div class="dashboard-content" role="region" aria-label="{{ if $isLocksPage }}Locks{{ else }}Jobs{{ end }} results" tabindex="0">
+    {{ if not $isLocksPage }}
     <section id="pull-requests" aria-labelledby="pull-heading">
-      <div class="section-header"><h2 id="pull-heading">Jobs</h2><p>Grouped by repository and workspace</p></div>
-      <p class="data-note">Tracked job output only. Lock-only projects are listed in Locks. Operation results are not available in this beta.</p>
+      <h2 id="pull-heading" class="visually-hidden">Jobs</h2>
       {{ range .Repositories }}
       {{ $repo := .Name }}
       <details class="repository" open>
@@ -75,10 +96,18 @@
                 <div class="project-jobs">
                   <p>{{ if .Name }}{{ .Name }} <span aria-hidden="true">·</span> {{ end }}<code>{{ if .Path }}{{ .Path }}{{ else }}Project path unavailable{{ end }}</code></p>
                   <ul class="job-links">
-                  {{ range .Jobs }}
-                    <li class="job-link"><span class="job-description"><a href="{{ $basePath }}{{ .JobIDUrl }}">{{ if .JobDescription }}{{ .JobDescription }}{{ else if .JobStep }}{{ .JobStep }}{{ else }}View job output{{ end }}</a>{{ if and .JobStep .JobDescription (ne .JobDescription .JobStep) }} <span class="step">{{ .JobStep }}</span>{{ end }}</span>{{ if .TimeFormatted }} <time>{{ .TimeFormatted }}</time>{{ end }}</li>
+                  {{ range .PrimaryJobs }}
+                    {{ template "beta-job-row" . }}
                   {{ end }}
                   </ul>
+                  {{ if .EarlierJobs }}
+                  <details class="earlier-jobs">
+                    <summary>Earlier output ({{ len .EarlierJobs }})</summary>
+                    <ul class="job-links">
+                    {{ range .EarlierJobs }}{{ template "beta-job-row" . }}{{ end }}
+                    </ul>
+                  </details>
+                  {{ end }}
                 </div>
                 {{ end }}
                 </div>
@@ -94,6 +123,8 @@
       {{ end }}
       <div class="empty-state" id="no-pull-matches" hidden><h3>No matching jobs</h3><p>Try another search or clear the filters above.</p></div>
     </section>
+    {{ end }}
+    {{ if $isLocksPage }}
     <section id="locks" aria-labelledby="locks-heading">
       <div class="section-header"><h2 id="locks-heading">Locks</h2><p>Projects with a reserved plan</p></div>
       <ul class="lock-list">
@@ -111,7 +142,8 @@
       </ul>
       <div class="empty-state" id="no-lock-matches" hidden><h3>No matching locks</h3><p>Try another search or clear the filters above.</p></div>
     </section>
-    {{ if .ApplyLock.GlobalApplyLockEnabled }}
+    {{ end }}
+    {{ if and .ApplyLock.GlobalApplyLockEnabled (not $isLocksPage) }}
     <section id="apply-controls" aria-labelledby="apply-heading">
       <div class="section-header"><h2 id="apply-heading">Apply controls</h2><p>Global controls for apply commands</p></div>
       <div class="apply-panel">
@@ -124,7 +156,7 @@
     </div>
   </main>
 </div>
-{{ if .ApplyLock.GlobalApplyLockEnabled }}
+{{ if and .ApplyLock.GlobalApplyLockEnabled (not $isLocksPage) }}
 <dialog id="apply-dialog" aria-labelledby="dialog-heading">
   <form method="dialog">
     <h2 id="dialog-heading">{{ if .ApplyLock.Locked }}Enable{{ else }}Disable{{ end }} apply commands?</h2>
@@ -134,30 +166,19 @@
   </form>
 </dialog>
 {{ end }}
-<script src="{{ .CleanedBasePath }}/static/js/beta-dashboard-filters.js?v=2"></script>
+{{ if not $isLocksPage }}{{ template "beta-job-output.html.tmpl" . }}{{ end }}
+<script src="{{ .CleanedBasePath }}/static/js/beta-dashboard-filters.js?v=3"></script>
+{{ if not $isLocksPage }}<script src="{{ .CleanedBasePath }}/static/js/beta-job-output.js?v=1" defer></script>{{ end }}
 <script>
-  const navigation = document.querySelectorAll('.nav-link');
-  function updateNavigation() {
-    const current = window.location.hash || '#pull-requests';
-    navigation.forEach(link => {
-      if (link.getAttribute('href') === current) link.setAttribute('aria-current', 'location');
-      else link.removeAttribute('aria-current');
-    });
-    // The apply panel can be taller than the results viewport on short screens.
-    // Reveal its action rather than leaving it below the section's heading.
-    const target = document.getElementById(current === '#apply-controls' ? 'apply-toggle' : current.slice(1));
-    if (target) target.scrollIntoView({ block: current === '#apply-controls' ? 'nearest' : 'start' });
+  function revealApplyControl() {
+    if (window.location.hash !== '#apply-controls') return;
+    const target = document.getElementById('apply-toggle');
+    // Keep the action visible when the section is taller than the results viewport.
+    if (target) target.scrollIntoView({ block: 'nearest' });
   }
-  navigation.forEach(link => link.addEventListener('click', event => {
-    // Clicking the current section again does not emit a hashchange event.
-    if (link.getAttribute('href') === window.location.hash && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey) {
-      event.preventDefault();
-      updateNavigation();
-    }
-  }));
-  window.addEventListener('hashchange', updateNavigation);
-  window.addEventListener('load', updateNavigation);
-  updateNavigation();
+  window.addEventListener('hashchange', revealApplyControl);
+  window.addEventListener('load', revealApplyControl);
+  revealApplyControl();
   const dialog = document.getElementById('apply-dialog');
   const toggle = document.getElementById('apply-toggle');
   if (toggle && dialog) {

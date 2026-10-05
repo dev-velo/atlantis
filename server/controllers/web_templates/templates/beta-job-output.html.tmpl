@@ -1,0 +1,20 @@
+{{ define "beta-job-output.html.tmpl" }}
+<dialog id="job-output-dialog" aria-labelledby="job-output-heading" aria-describedby="job-output-status">
+  <div class="job-output-shell">
+    <header class="job-output-header">
+      <div class="job-output-heading-group">
+        <h2 id="job-output-heading">Job output</h2>
+        <p id="job-output-metadata"></p>
+        <p id="job-output-result"></p>
+      </div>
+      <div class="job-output-actions">
+        <a id="job-output-full-page" href="#">Open full page</a>
+        <button id="job-output-close" type="button" aria-label="Close job output">Close</button>
+      </div>
+    </header>
+    <p id="job-output-status" class="job-output-status" role="status" aria-live="polite">Select an execution to view its output.</p>
+    <p class="job-output-expired">If the terminal is blank or unavailable, its output may have expired. Open the full page to try again.</p>
+    <div id="job-output-frame-container" class="job-output-frame-container"></div>
+  </div>
+</dialog>
+{{ end }}

@@ -33,7 +33,7 @@ p { margin: 0; }
 .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 24px 12px 8px; }
 .nav-link { display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: var(--text); padding: 10px 12px; border-radius: var(--radius); }
 .nav-link:hover { color: var(--text); background: #e8eff3; }
-.nav-link[aria-current="location"] { color: var(--accent); background: #e3f0f5; font-weight: 600; }
+.nav-link[aria-current="page"] { color: var(--accent); background: #e3f0f5; font-weight: 600; }
 .nav-link span { font-size: 12px; color: var(--muted); }
 .sidebar-footer { display: grid; gap: 7px; flex-shrink: 0; margin-top: 16px; padding: 16px 10px 0; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted); }
 .sidebar-build { display: grid; gap: 7px; margin-top: 5px; }
@@ -62,6 +62,12 @@ section { margin-bottom: 32px; scroll-margin-top: 24px; }
 .repository summary::before { content: ""; display: inline-block; width: 6px; height: 6px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(-45deg); margin-right: 12px; vertical-align: 2px; }
 .repository[open] summary::before { transform: rotate(45deg); vertical-align: 3px; }
 .repository summary:hover { background: #eef3f5; }
+.repository .earlier-jobs { margin: 7px 0 0; }
+.repository .earlier-jobs summary { padding: 4px 0; background: transparent; color: var(--muted); font-size: 11px; font-weight: 400; }
+.repository .earlier-jobs summary:hover { background: transparent; color: var(--text); }
+.repository .earlier-jobs summary::before, .repository[open] .earlier-jobs summary::before { width: 5px; height: 5px; margin-right: 7px; vertical-align: 2px; transform: rotate(-45deg); }
+.repository .earlier-jobs[open] summary::before { transform: rotate(45deg); }
+.repository .earlier-jobs .job-links { padding: 3px 0 2px 12px; }
 .repo-type { float: right; font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 8px; }
 .workspace h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 16px; background: var(--subtle); border-top: 1px solid var(--border); color: var(--muted); font-weight: 400; font-size: 12px; }
 .workspace h3 code { min-width: 0; white-space: normal; }
@@ -82,7 +88,15 @@ section { margin-bottom: 32px; scroll-margin-top: 24px; }
 .job-links { margin: 0; padding: 0; list-style: none; }
 .job-links .job-link { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; overflow-wrap: anywhere; }
 .job-links .job-link + .job-link { margin-top: 4px; }
-.job-description { min-width: 0; }
+.job-description { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.job-result-group { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; max-width: 100%; }
+.job-result { display: inline-block; padding: 1px 6px; border: 1px solid var(--border); border-radius: 999px; background: var(--subtle); font-size: 11px; line-height: 1.5; white-space: nowrap; }
+.job-status-running { color: #8a5b00; border-color: #dfc58a; background: #fff8e7; }
+.job-status-succeeded { color: var(--success); border-color: #b8d7c4; background: #f0f8f3; }
+.job-status-failed { color: var(--failed); border-color: #e4bcbc; background: #fff4f4; }
+.job-status-unknown { color: var(--muted); }
+.job-counts { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.extra-count, .no-change-label { color: var(--muted); font-size: 11px; }
 .job-links time { flex-shrink: 0; font-size: 11px; color: var(--muted); }
 .step { font-size: 11px; color: var(--muted); }
 .lock-list { border: 1px solid var(--border); border-radius: var(--radius); }
@@ -141,5 +155,4 @@ dialog p { margin-top: 12px; font-size: 14px; }
   .repo-type { display: none; }
 }
 
-.data-note { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
 h4.pull-title { font-size: 14px; letter-spacing: normal; margin: 0; }
